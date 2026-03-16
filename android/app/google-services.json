@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "238207412063",
+    "project_id": "cut-sports-14b3f",
+    "storage_bucket": "cut-sports-14b3f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:238207412063:android:830655d0fe8df66d33f8ea",
+        "android_client_info": {
+          "package_name": "com.example.campus_league"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC6AMo0zih9pf1FydKsGQ7EGFBRT8Gs0ME"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:238207412063:android:0e3ca8a1a167354c33f8ea",
+        "android_client_info": {
+          "package_name": "com.example.src_project"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC6AMo0zih9pf1FydKsGQ7EGFBRT8Gs0ME"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
