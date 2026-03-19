@@ -256,7 +256,7 @@ class _AdminState extends State<Admin> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const Football()),
+                  MaterialPageRoute(builder: (_) =>  Football()),
                 );
               },
               child: const Text("View Football Table"),
