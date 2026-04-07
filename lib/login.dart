@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:src_project/admin.dart';
+import 'package:campus_league/admin.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 // this page uses Firebase Authentication; only a single admin account
@@ -51,6 +51,7 @@ class _LoginPageState extends State<LoginPage> {
         // ignore auth errors since we trust local credentials
       }
 
+      if (!mounted) return;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const Admin()),

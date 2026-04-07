@@ -1,5 +1,5 @@
-name: "src_project"
-description: "SRC Campus League App"
+name: campus_league
+description: "Campus League App"
 publish_to: 'none' # Prevent publishing
 
 version: 1.0.0+1
@@ -36,4 +36,4 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: false
-  image_path: "assets/cut.webp"
+  image_path: "assets/silver.png"

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:src_project/football.dart';
-import 'package:src_project/rugby.dart';
+import 'package:campus_league/football.dart';
+import 'package:campus_league/rugby.dart';
 
 class Homescreen extends StatelessWidget {
   const Homescreen({super.key});
@@ -9,7 +9,7 @@ class Homescreen extends StatelessWidget {
       return Scaffold(
         appBar:AppBar(leading: Icon(Icons.sports_soccer_outlined),
           title: Center(
-            child: const Text("Welcome",style: TextStyle(fontSize:26,fontWeight: FontWeight.bold,color: Color.fromARGB(255, 240, 244, 240)),)),backgroundColor: const Color.fromARGB(255, 140, 138, 138),),
+            child: const Text("Welcome",style: TextStyle(fontSize:26,fontWeight: FontWeight.bold,color: Color.fromARGB(255, 3, 3, 3)),)),backgroundColor: const Color.fromARGB(255, 250, 248, 248),),
           body: ListView(
             children: [
               SizedBox(height: 20,),
@@ -26,7 +26,7 @@ class Homescreen extends StatelessWidget {
       height: 150,
       width: 150,
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.green),
+        border: Border.all(color: const Color.fromARGB(255, 6, 243, 53)),
         image: DecorationImage(
           image: AssetImage("assets/CUTFS.png"),
           fit: BoxFit.cover,
@@ -39,7 +39,7 @@ class Homescreen extends StatelessWidget {
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: Colors.green,
+            color: const Color.fromARGB(255, 44, 137, 25),
           ),
         ),
       ),
@@ -61,20 +61,20 @@ class Homescreen extends StatelessWidget {
       height: 150,
       width: 150,
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.green),
+        border: Border.all(color: const Color.fromARGB(255, 10, 220, 52)),
         image: DecorationImage(
-          image: AssetImage("assets/Rugby.png"),
+          image: AssetImage("assets/silver.png"),
           fit: BoxFit.cover,
         ),
         borderRadius: BorderRadius.circular(20),
       ),
       child: ListTile(
         title: Text(
-          "Rugby",
+          "Available tournaments",
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: Colors.green,
+            color: const Color.fromARGB(255, 8, 161, 208),
           ),
         ),
       ),

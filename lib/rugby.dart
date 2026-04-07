@@ -12,7 +12,7 @@ class Rugby extends StatelessWidget {
       Navigator.pop(context);
     },
         ),
-        title: Center(child: Text("Rugby",style: TextStyle(fontSize: 20,fontWeight: FontWeight.bold,color: Colors.green)),),
+        title: Center(child: Text("Available tournaments",style: TextStyle(fontSize: 20,fontWeight: FontWeight.bold,color: Colors.green)),),
       ),
 
     ),
