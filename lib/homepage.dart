@@ -26,7 +26,7 @@ class Homescreen extends StatelessWidget {
       height: 150,
       width: 150,
       decoration: BoxDecoration(
-        border: Border.all(color: const Color.fromARGB(255, 6, 243, 53)),
+        border: Border.all(color: const Color.fromARGB(255, 3, 185, 240)),
         image: DecorationImage(
           image: AssetImage("assets/CUTFS.png"),
           fit: BoxFit.cover,
@@ -39,7 +39,7 @@ class Homescreen extends StatelessWidget {
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: const Color.fromARGB(255, 44, 137, 25),
+            color: const Color.fromARGB(255, 0, 0, 0),
           ),
         ),
       ),
@@ -61,7 +61,7 @@ class Homescreen extends StatelessWidget {
       height: 150,
       width: 150,
       decoration: BoxDecoration(
-        border: Border.all(color: const Color.fromARGB(255, 10, 220, 52)),
+        border: Border.all(color: const Color.fromARGB(255, 7, 171, 241)),
         image: DecorationImage(
           image: AssetImage("assets/silver.png"),
           fit: BoxFit.cover,
@@ -70,11 +70,11 @@ class Homescreen extends StatelessWidget {
       ),
       child: ListTile(
         title: Text(
-          "Available tournaments",
+          "Players Stats",
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: const Color.fromARGB(255, 8, 161, 208),
+            color: const Color.fromARGB(255, 0, 0, 0),
           ),
         ),
       ),

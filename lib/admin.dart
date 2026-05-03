@@ -1,11 +1,51 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:campus_league/football.dart';
 import 'package:campus_league/team.dart';
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
+// TopScorer Model
+class TopScorer {
+  String id;
+  String name;
+  int age;
+  int goals;
+  int assists;
+
+  TopScorer({
+    required this.id,
+    required this.name,
+    required this.age,
+    required this.goals,
+    required this.assists,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'age': age,
+      'goals': goals,
+      'assists': assists,
+    };
+  }
+
+  factory TopScorer.fromMap(Map<String, dynamic> map, {String? id}) {
+    return TopScorer(
+      id: id ?? (map['id'] as String? ?? ''),
+      name: map['name'] as String? ?? '',
+      age: map['age'] as int? ?? 0,
+      goals: map['goals'] as int? ?? 0,
+      assists: map['assists'] as int? ?? 0,
+    );
+  }
+}
 
 class Admin extends StatefulWidget {
   const Admin({super.key});
@@ -19,10 +59,22 @@ class _AdminState extends State<Admin> {
   final winController = TextEditingController();
   final lossController = TextEditingController();
   final drawController = TextEditingController();
+  final goalsForController = TextEditingController();
+  final goalsAgainstController = TextEditingController();
+  final ImagePicker _picker = ImagePicker();
+  XFile? _pickedLogoFile;
+  Uint8List? _logoPreviewBytes;
+  String? _existingLogoUrl;
 
   final matchTimeController = TextEditingController();
   final homeGoalsController = TextEditingController();
   final awayGoalsController = TextEditingController();
+
+  // TopScorer controllers
+  final playerNameController = TextEditingController();
+  final playerAgeController = TextEditingController();
+  final playerGoalsController = TextEditingController();
+  final playerAssistsController = TextEditingController();
 
   String? selectedHomeTeam;
   String? selectedAwayTeam;
@@ -30,16 +82,23 @@ class _AdminState extends State<Admin> {
   List<Map<String, dynamic>> fixtures = [];
   bool isLoading = true;
 
+  // TopScorer state
+  List<TopScorer> topScorers = [];
+  String? editingTopScorerId;
+
   final CollectionReference _teamsCol = FirebaseFirestore.instance.collection(
     'teams',
   );
   final CollectionReference _fixturesCol = FirebaseFirestore.instance
       .collection('fixtures');
+  final CollectionReference _topScorersCol = FirebaseFirestore.instance
+      .collection('topScorers');
 
   List<Team> teams = [];
   int? editingIndex;
   late StreamSubscription<QuerySnapshot> _subscription;
   late StreamSubscription<QuerySnapshot> _fixturesSubscription;
+  late StreamSubscription<QuerySnapshot> _topScorersSubscription;
 
   @override
   void initState() {
@@ -88,6 +147,21 @@ class _AdminState extends State<Admin> {
           isLoading = false;
         });
       });
+
+      _topScorersSubscription = _topScorersCol.orderBy('goals', descending: true).snapshots().listen((snapshot) {
+        setState(() {
+          topScorers = snapshot.docs.map((doc) {
+            return TopScorer.fromMap(
+              doc.data() as Map<String, dynamic>,
+              id: doc.id,
+            );
+          }).toList();
+        });
+      }, onError: (error) {
+        setState(() {
+          isLoading = false;
+        });
+      });
     } catch (_) {}
   }
 
@@ -95,13 +169,20 @@ class _AdminState extends State<Admin> {
   void dispose() {
     _subscription.cancel();
     _fixturesSubscription.cancel();
+    _topScorersSubscription.cancel();
     nameController.dispose();
     winController.dispose();
     lossController.dispose();
     drawController.dispose();
+    goalsForController.dispose();
+    goalsAgainstController.dispose();
     matchTimeController.dispose();
     homeGoalsController.dispose();
     awayGoalsController.dispose();
+    playerNameController.dispose();
+    playerAgeController.dispose();
+    playerGoalsController.dispose();
+    playerAssistsController.dispose();
     super.dispose();
   }
 
@@ -109,6 +190,54 @@ class _AdminState extends State<Admin> {
     final prefs = await SharedPreferences.getInstance();
     final encoded = jsonEncode(teams.map((t) => t.toMap()).toList());
     await prefs.setString('teams', encoded);
+  }
+
+  Future<String?> _uploadLogo(XFile logoFile) async {
+    try {
+      final bytes = await logoFile.readAsBytes();
+      final extension = logoFile.name.contains('.')
+          ? logoFile.name.split('.').last
+          : 'jpg';
+      final ref = FirebaseStorage.instance
+          .ref()
+          .child('team_logos/${DateTime.now().millisecondsSinceEpoch}.$extension');
+      final task = ref.putData(
+        bytes,
+        SettableMetadata(contentType: 'image/$extension'),
+      );
+      final snapshot = await task;
+      return await snapshot.ref.getDownloadURL();
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<void> _pickLogo() async {
+    try {
+      final picked = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+      );
+      if (picked != null) {
+        final bytes = await picked.readAsBytes();
+        setState(() {
+          _pickedLogoFile = picked;
+          _logoPreviewBytes = bytes;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Logo picker failed. Please try again.')),
+      );
+    }
+  }
+
+  void _clearLogoSelection() {
+    setState(() {
+      _pickedLogoFile = null;
+      _logoPreviewBytes = null;
+    });
   }
 
   Future<void> _loadTeamsFromPrefs() async {
@@ -141,13 +270,19 @@ class _AdminState extends State<Admin> {
     final draw = drawController.text.isEmpty
         ? 0
         : int.tryParse(drawController.text);
+    final goalsFor = goalsForController.text.isEmpty
+        ? 0
+        : int.tryParse(goalsForController.text);
+    final goalsAgainst = goalsAgainstController.text.isEmpty
+        ? 0
+        : int.tryParse(goalsAgainstController.text);
 
-    if (win == null || loss == null || draw == null) {
+    if (win == null || loss == null || draw == null || goalsFor == null || goalsAgainst == null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Wins, Draws, and Losses must be numbers only',
+            'All fields must be numbers only',
             style: TextStyle(color: Colors.red),
           ),
         ),
@@ -155,33 +290,71 @@ class _AdminState extends State<Admin> {
       return;
     }
 
+    String? logoUrl = _existingLogoUrl;
+    if (_pickedLogoFile != null) {
+      final uploadedUrl = await _uploadLogo(_pickedLogoFile!);
+      if (uploadedUrl != null) {
+        logoUrl = uploadedUrl;
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Logo upload failed. The existing logo will remain.'),
+          ),
+        );
+      }
+    }
+
     final team = Team(
       name: nameController.text,
       win: win,
       loss: loss,
       draw: draw,
-      goalsFor: editingIndex != null ? teams[editingIndex!].goalsFor : 0,
-      goalsAgainst: editingIndex != null
-          ? teams[editingIndex!].goalsAgainst
-          : 0,
+      goalsFor: goalsFor,
+      goalsAgainst: goalsAgainst,
+      logoUrl: logoUrl,
       played: win + loss + draw,
     );
 
     try {
       if (editingIndex == null) {
-        await _teamsCol.add(team.toMap());
+        final docRef = await _teamsCol.add(team.toMap());
+        team.id = docRef.id;
+        setState(() {
+          teams.add(team);
+          teams.sort((a, b) => b.points.compareTo(a.points));
+        });
       } else {
         final existing = teams[editingIndex!];
         if (existing.id != null) {
           await _teamsCol.doc(existing.id).set(team.toMap());
         }
-        editingIndex = null;
+        setState(() {
+          teams[editingIndex!] = Team(
+            id: existing.id,
+            name: team.name,
+            win: team.win,
+            loss: team.loss,
+            draw: team.draw,
+            goalsFor: team.goalsFor,
+            goalsAgainst: team.goalsAgainst,
+            logoUrl: logoUrl,
+            played: team.played,
+          );
+          teams.sort((a, b) => b.points.compareTo(a.points));
+          editingIndex = null;
+        });
       }
 
       nameController.clear();
       winController.clear();
       lossController.clear();
       drawController.clear();
+      goalsForController.clear();
+      goalsAgainstController.clear();
+      _pickedLogoFile = null;
+      _logoPreviewBytes = null;
+      _existingLogoUrl = null;
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -197,6 +370,11 @@ class _AdminState extends State<Admin> {
       winController.text = team.win.toString();
       lossController.text = team.loss.toString();
       drawController.text = team.draw.toString();
+      goalsForController.text = team.goalsFor.toString();
+      goalsAgainstController.text = team.goalsAgainst.toString();
+      _pickedLogoFile = null;
+      _logoPreviewBytes = null;
+      _existingLogoUrl = team.logoUrl;
       editingIndex = index;
     });
   }
@@ -214,6 +392,8 @@ class _AdminState extends State<Admin> {
             winController.clear();
             lossController.clear();
             drawController.clear();
+            goalsForController.clear();
+            goalsAgainstController.clear();
           }
         });
         _saveTeamsToPrefs();
@@ -416,10 +596,263 @@ class _AdminState extends State<Admin> {
     });
   }
 
+  // TopScorer Methods
+  Future<void> _addOrUpdateTopScorer() async {
+    final name = playerNameController.text.trim();
+    final age = int.tryParse(playerAgeController.text) ?? 0;
+    final goals = int.tryParse(playerGoalsController.text) ?? 0;
+    final assists = int.tryParse(playerAssistsController.text) ?? 0;
+
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Player name cannot be empty')),
+      );
+      return;
+    }
+
+    try {
+      if (editingTopScorerId != null) {
+        // Update existing player
+        await _topScorersCol.doc(editingTopScorerId).update({
+          'name': name,
+          'age': age,
+          'goals': goals,
+          'assists': assists,
+        });
+      } else {
+        // Add new player
+        if (topScorers.length >= 30) {
+          // Remove the last player if limit is reached
+          final lastPlayer = topScorers.last;
+          await _topScorersCol.doc(lastPlayer.id).delete();
+        }
+
+        final docRef = _topScorersCol.doc();
+        await docRef.set({
+          'id': docRef.id,
+          'name': name,
+          'age': age,
+          'goals': goals,
+          'assists': assists,
+        });
+      }
+      _clearTopScorerForm();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
+
+  void _editTopScorer(int index) {
+    final player = topScorers[index];
+    setState(() {
+      editingTopScorerId = player.id;
+      playerNameController.text = player.name;
+      playerAgeController.text = player.age.toString();
+      playerGoalsController.text = player.goals.toString();
+      playerAssistsController.text = player.assists.toString();
+    });
+  }
+
+  Future<void> _deleteTopScorer(int index) async {
+    final player = topScorers[index];
+    try {
+      await _topScorersCol.doc(player.id).delete();
+      _clearTopScorerForm();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
+
+  void _clearTopScorerForm() {
+    setState(() {
+      editingTopScorerId = null;
+      playerNameController.clear();
+      playerAgeController.clear();
+      playerGoalsController.clear();
+      playerAssistsController.clear();
+    });
+  }
+
+  List<Map<String, dynamic>> _teamFixtures(Team team) {
+    final name = team.name.toLowerCase();
+    return fixtures
+        .where((fixture) {
+          final home = (fixture['homeTeam'] as String? ?? '').toLowerCase();
+          final away = (fixture['awayTeam'] as String? ?? '').toLowerCase();
+          return (home == name || away == name);
+        })
+        .toList()
+      ..sort((a, b) {
+        final aTime = a['matchTime'] as String? ?? '';
+        final bTime = b['matchTime'] as String? ?? '';
+        return bTime.compareTo(aTime);
+      });
+  }
+
+  String _teamResultLabel(Map<String, dynamic> fixture, Team team) {
+    final status = fixture['status'] as String? ?? '';
+    if (status != 'completed') {
+      return 'vs';
+    }
+    final homeGoals = fixture['homeGoals'] as int? ?? 0;
+    final awayGoals = fixture['awayGoals'] as int? ?? 0;
+    final isHome = (fixture['homeTeam'] as String? ?? '').toLowerCase() == team.name.toLowerCase();
+    final scored = isHome ? homeGoals : awayGoals;
+    final conceded = isHome ? awayGoals : homeGoals;
+    if (scored > conceded) {
+      return 'W';
+    }
+    if (scored == conceded) {
+      return 'D';
+    }
+    return 'L';
+  }
+
+  Color _teamResultColor(String label) {
+    if (label == 'W') return Colors.green;
+    if (label == 'D' || label == 'vs') return Colors.grey;
+    return Colors.red;
+  }
+
+  void _showTeamDetails(Team team, int position) {
+    final history = _teamFixtures(team);
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: Colors.grey.shade200,
+                backgroundImage: team.logoUrl != null && team.logoUrl!.isNotEmpty
+                    ? NetworkImage(team.logoUrl!) as ImageProvider
+                    : null,
+                child: team.logoUrl == null || team.logoUrl!.isEmpty
+                    ? Text(
+                        team.name.isNotEmpty ? team.name[0].toUpperCase() : '?',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      )
+                    : null,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      team.name,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Position #$position • ${team.points} pts',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Record: ${team.win}-${team.draw}-${team.loss} • P: ${team.played} • GF: ${team.goalsFor} GA: ${team.goalsAgainst}',
+                  style: const TextStyle(fontSize: 14),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Match Results',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                if (history.isEmpty)
+                  const Text('No completed matches found for this team.')
+                else
+                  Column(
+                    children: history.map((fixture) {
+                      final label = _teamResultLabel(fixture, team);
+                      final homeGoals = fixture['homeGoals'] as int?;
+                      final awayGoals = fixture['awayGoals'] as int?;
+                      final score = homeGoals != null && awayGoals != null
+                          ? '$homeGoals - $awayGoals'
+                          : 'vs';
+                      final status = fixture['status'] as String? ?? '';
+                      final opponentName = fixture['homeTeam'] == team.name ? fixture['awayTeam'] : fixture['homeTeam'];
+                      Team? opponentTeam;
+                      try {
+                        opponentTeam = teams.firstWhere((t) => t.name.trim().toLowerCase() == opponentName.trim().toLowerCase());
+                      } catch (e) {
+                        opponentTeam = null;
+                      }
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: CircleAvatar(
+                          radius: 20,
+                          backgroundColor: Colors.grey.shade200,
+                          backgroundImage: opponentTeam?.logoUrl != null && opponentTeam!.logoUrl!.isNotEmpty
+                              ? NetworkImage(opponentTeam.logoUrl!) as ImageProvider
+                              : null,
+                          child: opponentTeam?.logoUrl == null || opponentTeam!.logoUrl!.isEmpty
+                              ? Text(
+                                  opponentName.isNotEmpty ? opponentName[0].toUpperCase() : '?',
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                )
+                              : null,
+                        ),
+                        title: Text(
+                          '${fixture['homeTeam']} $score ${fixture['awayTeam']}',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(fixture['matchTime'] as String? ?? ''),
+                            const SizedBox(height: 2),
+                            Text(
+                              status.isNotEmpty ? status.toUpperCase() : 'UNKNOWN',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         appBar: AppBar(
           title: const Text("Admin Page"),
@@ -437,6 +870,7 @@ class _AdminState extends State<Admin> {
             tabs: [
               Tab(text: "Set Log"),
               Tab(text: "Set Fixture"),
+              Tab(text: "Top Scorers"),
             ],
           ),
         ),
@@ -468,6 +902,84 @@ class _AdminState extends State<Admin> {
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(labelText: "Losses"),
                   ),
+                  TextField(
+                    controller: goalsForController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: "Goals For"),
+                  ),
+                  TextField(
+                    controller: goalsAgainstController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: "Goals Against"),
+                  ),
+                  const SizedBox(height: 12),
+                  if (editingIndex != null)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            ElevatedButton.icon(
+                              onPressed: _pickLogo,
+                              icon: const Icon(Icons.image),
+                              label: const Text('Upload/Change Logo'),
+                            ),
+                            const SizedBox(width: 12),
+                            if (_pickedLogoFile != null)
+                              TextButton(
+                                onPressed: _clearLogoSelection,
+                                child: const Text('Clear selection'),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _pickedLogoFile != null
+                              ? 'New logo: ${_pickedLogoFile!.name}'
+                              : _existingLogoUrl != null
+                                  ? 'Current logo will be kept unless changed'
+                                  : 'No logo selected',
+                          style: TextStyle(
+                            color: Colors.grey.shade700,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 12),
+                        if (_logoPreviewBytes != null)
+                          Container(
+                            height: 120,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey.shade300),
+                              image: DecorationImage(
+                                image: MemoryImage(_logoPreviewBytes!),
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                          )
+                        else if (_existingLogoUrl != null)
+                          Container(
+                            height: 120,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.network(
+                                _existingLogoUrl!,
+                                fit: BoxFit.contain,
+                                errorBuilder: (context, error, stackTrace) => const Center(
+                                  child: Icon(Icons.broken_image, size: 40, color: Colors.grey),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
                   const SizedBox(height: 10),
                   ElevatedButton(
                     onPressed: addOrUpdateTeam,
@@ -485,36 +997,70 @@ class _AdminState extends State<Admin> {
                       return Card(
                         margin: const EdgeInsets.symmetric(vertical: 6),
                         elevation: 3,
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 10,
-                          ),
-                          title: Text(
-                            team.name,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Text(
-                            "P: ${team.played}, W: ${team.win}, D: ${team.draw}, L: ${team.loss}, Pts: ${team.points}",
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.edit,
-                                  color: Colors.blue,
-                                ),
-                                onPressed: () => editTeam(index),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () => _showTeamDetails(team, index + 1),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            child: ListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 10,
                               ),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.delete,
-                                  color: Colors.red,
-                                ),
-                                onPressed: () => deleteTeam(index),
+                              leading: CircleAvatar(
+                                radius: 26,
+                                backgroundColor: Colors.grey.shade200,
+                                backgroundImage: team.logoUrl != null && team.logoUrl!.isNotEmpty
+                                    ? NetworkImage(team.logoUrl!) as ImageProvider
+                                    : null,
+                                child: team.logoUrl == null || team.logoUrl!.isEmpty
+                                    ? Icon(
+                                        Icons.image,
+                                        color: Colors.grey.shade700,
+                                        size: 28,
+                                      )
+                                    : null,
                               ),
-                            ],
+                              title: Text(
+                                team.name,
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              subtitle: Text(
+                                'Position #${index + 1} • P: ${team.played}, W: ${team.win}, D: ${team.draw}, L: ${team.loss}, Pts: ${team.points}',
+                                style: TextStyle(color: Colors.grey.shade700),
+                              ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.edit,
+                                      color: Colors.blue,
+                                    ),
+                                    onPressed: () => editTeam(index),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.delete,
+                                      color: Colors.red,
+                                    ),
+                                    onPressed: () => deleteTeam(index),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Icon(
+                                    Icons.arrow_forward_ios,
+                                    size: 18,
+                                    color: Colors.grey,
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       );
@@ -698,9 +1244,119 @@ class _AdminState extends State<Admin> {
                 ],
               ),
             ),
+            // 🔹 TOP SCORERS TAB
+            SingleChildScrollView(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Add Player to Top Scorers',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: playerNameController,
+                    decoration: const InputDecoration(labelText: 'Player Name'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: playerAgeController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Age'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: playerGoalsController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Goals'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: playerAssistsController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Assists'),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      ElevatedButton(
+                        onPressed: _addOrUpdateTopScorer,
+                        child: Text(
+                          editingTopScorerId == null
+                              ? 'Add Player'
+                              : 'Update Player',
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      if (editingTopScorerId != null)
+                        OutlinedButton(
+                          onPressed: _clearTopScorerForm,
+                          child: const Text('Cancel'),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  const Divider(),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Top Scorers List (Max 30)',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  if (topScorers.isEmpty)
+                    const Text('No players added yet.')
+                  else
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: topScorers.length,
+                      itemBuilder: (context, index) {
+                        final player = topScorers[index];
+                        return Card(
+                          margin: const EdgeInsets.symmetric(vertical: 6),
+                          elevation: 2,
+                          child: ListTile(
+                            title: Text(
+                              '${index + 1}. ${player.name}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            subtitle: Text(
+                              'Age: ${player.age}, Goals: ${player.goals}, Assists: ${player.assists}',
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.edit,
+                                    color: Colors.blue,
+                                  ),
+                                  onPressed: () => _editTopScorer(index),
+                                ),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.delete,
+                                    color: Colors.red,
+                                  ),
+                                  onPressed: () => _deleteTopScorer(index),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 }
+

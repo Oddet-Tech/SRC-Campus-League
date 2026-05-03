@@ -7,6 +7,7 @@ class Team {
   int draw;
   int goalsFor;
   int goalsAgainst;
+  String? logoUrl;
 
   Team({
     this.id,
@@ -16,10 +17,13 @@ class Team {
     required this.draw,
     required this.goalsFor,
     required this.goalsAgainst,
+    this.logoUrl,
     required int played,
   }) : played = win + draw + loss;
 
   int get points => win * 3 + draw;
+
+  int get goalDifference => goalsFor - goalsAgainst;
 
   Map<String, dynamic> toMap() => {
     'name': name,
@@ -29,6 +33,7 @@ class Team {
     'draw': draw,
     'goalsFor': goalsFor,
     'goalsAgainst': goalsAgainst,
+    if (logoUrl != null) 'logoUrl': logoUrl,
   };
 
   factory Team.fromMap(Map<String, dynamic> map, {String? id}) {
@@ -41,6 +46,7 @@ class Team {
       draw: map['draw'] as int? ?? 0,
       goalsFor: map['goalsFor'] as int? ?? 0,
       goalsAgainst: map['goalsAgainst'] as int? ?? 0,
+      logoUrl: map['logoUrl'] as String?,
     );
   }
 }

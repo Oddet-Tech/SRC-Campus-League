@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:campus_league/admin.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 // this page uses Firebase Authentication; only a single admin account
-// is allowed. the email/password are hard‑coded below and any other
-// credentials will be rejected.
-
-const String _kAdminEmail = 'shilengeoddet@gmail.com';
-const String _kAdminPassword = 'cutsports@freestate.campusleague';
+// is allowed. the email/password are stored in Firestore.
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -23,6 +20,38 @@ class _LoginPageState extends State<LoginPage> {
 
   String? _errorMessage;
   bool _obscurePassword = true; // <-- track password visibility
+  late String adminEmail;
+  late String adminPassword;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAdminCredentials();
+  }
+
+  Future<void> _loadAdminCredentials() async {
+    try {
+      final doc = await FirebaseFirestore.instance.collection('admin').doc('credentials').get();
+      if (doc.exists) {
+        adminEmail = doc['email'];
+        adminPassword = doc['password'];
+      } else {
+        adminEmail = 'cut@sports.com';
+        adminPassword = 'sports.campus';
+        await FirebaseFirestore.instance.collection('admin').doc('credentials').set({
+          'email': adminEmail,
+          'password': adminPassword,
+        });
+      }
+    } catch (e) {
+      adminEmail = 'cut@sports.com';
+      adminPassword = 'sports.campus';
+    }
+    setState(() {
+      _loading = false;
+    });
+  }
 
   Future<void> _attemptLogin() async {
     setState(() {
@@ -33,8 +62,8 @@ class _LoginPageState extends State<LoginPage> {
       final email = _emailController.text.trim();
       final password = _passwordController.text;
 
-      // only allow the single hard-coded admin credentials
-      if (email != _kAdminEmail || password != _kAdminPassword) {
+      // only allow the stored admin credentials
+      if (email != adminEmail || password != adminPassword) {
         setState(() {
           _errorMessage = 'Only the designated admin may log in';
         });

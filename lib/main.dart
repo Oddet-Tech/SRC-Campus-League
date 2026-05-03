@@ -213,6 +213,9 @@ class _MyHomePageState extends State<MyHomePage> {
                                     ),
                                   );
                                 } else {
+                                  if (user != null) {
+                                    FirebaseAuth.instance.signOut();
+                                  }
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
