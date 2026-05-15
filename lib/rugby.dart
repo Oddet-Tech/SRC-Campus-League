@@ -5,14 +5,14 @@ import 'dart:async';
 class TopScorer {
   String id;
   String name;
-  int age;
+  String teamname;
   int goals;
   int assists;
 
   TopScorer({
     required this.id,
     required this.name,
-    required this.age,
+    required this.teamname,
     required this.goals,
     required this.assists,
   });
@@ -21,12 +21,12 @@ class TopScorer {
     return TopScorer(
       id: id ?? (map['id'] as String? ?? ''),
       name: map['name'] as String? ?? '',
-      age: map['age'] as int? ?? 0,
+      teamname: map['Team'] as String? ?? '',
       goals: map['goals'] as int? ?? 0,
       assists: map['assists'] as int? ?? 0,
     );
   }
-
+  
   bool isBestPlayer() {
     // Best player: is in top 10 goal scorers AND has assists
     return true; // Will filter in _loadTopScorers
@@ -183,7 +183,7 @@ class _RugbyState extends State<Rugby> {
                                         ),
                                       ),
                                       subtitle: Text(
-                                        'Age: ${player.age} | Goals: ${player.goals} | Assists: ${player.assists}',
+                                       'Team: ${player.teamname}, Goals: ${player.goals}, Assists: ${player.assists}',
                                         style: const TextStyle(
                                           fontWeight: FontWeight.bold,
                                         ),
@@ -238,7 +238,7 @@ class _RugbyState extends State<Rugby> {
                                   ),
                                 ),
                                 subtitle: Text(
-                                  'Age: ${player.age} | Goals: ${player.goals} | Assists: ${player.assists}',
+                                  'Team: ${player.teamname} | Goals: ${player.goals} | Assists: ${player.assists}',
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                   ),

@@ -240,13 +240,6 @@ class _FootballState extends State<Football> {
                           ? '$homeGoals - $awayGoals'
                           : 'vs';
                       final status = fixture['status'] as String? ?? 'scheduled';
-                      final opponentName = fixture['homeTeam'] == team.name ? fixture['awayTeam'] : fixture['homeTeam'];
-                      Team? opponentTeam;
-                      try {
-                        opponentTeam = teams.firstWhere((t) => t.name.trim().toLowerCase() == opponentName.trim().toLowerCase());
-                      } catch (e) {
-                        opponentTeam = null;
-                      }
                       return ListTile(
                         contentPadding: EdgeInsets.zero,
                         leading: CircleAvatar(
@@ -315,14 +308,11 @@ class _FootballState extends State<Football> {
 
         body: TabBarView(
           children: [
-            // 🔹 TAB 1: FOOTBALL TABLE
             isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : sortedTeams.isEmpty
-                ? const Center(child: Text("No Teams Yet"))
-                : LayoutBuilder(
-                    builder: (context, constraints) {
-                      return SingleChildScrollView(
+                    ? const Center(child: Text("No Teams Yet"))
+                    : SingleChildScrollView(
                         child: FittedBox(
                           fit: BoxFit.scaleDown,
                           alignment: Alignment.topLeft,
@@ -354,11 +344,7 @@ class _FootballState extends State<Football> {
                                               ? NetworkImage(team.logoUrl!) as ImageProvider
                                               : null,
                                           child: team.logoUrl == null || team.logoUrl!.isEmpty
-                                              ? const Icon(
-                                                  Icons.image,
-                                                  size: 14,
-                                                  color: Colors.grey,
-                                                )
+                                              ? const Icon(Icons.image, size: 14, color: Colors.grey)
                                               : null,
                                         ),
                                         const SizedBox(width: 8),
@@ -372,121 +358,86 @@ class _FootballState extends State<Football> {
                                     ),
                                     onTap: () => _showTeamDetails(team, index + 1),
                                   ),
-                                  DataCell(Text("${team.played}", style: const TextStyle(fontWeight: FontWeight.bold,fontSize: 26))),
-                                  DataCell(
-                                    Text(
-                                      "${team.win}",
-                                      style: const TextStyle(
-                                        color: Colors.green,
-                                        fontWeight: FontWeight.bold,fontSize: 26,
-                                      ),
+                                  DataCell(Text("${team.played}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 26))),
+                                  DataCell(Text("${team.win}", style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 26))),
+                                  DataCell(Text("${team.draw}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 26))),
+                                  DataCell(Text("${team.loss}", style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 26))),
+                                  DataCell(Text("${team.goalsFor}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 26))),
+                                  DataCell(Text("${team.goalsAgainst}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 26))),
+                                  DataCell(Text(
+                                    "${team.goalDifference > 0 ? '+' : ''}${team.goalDifference}",
+                                    style: TextStyle(
+                                      color: team.goalDifference > 0
+                                          ? Colors.green
+                                          : team.goalDifference < 0
+                                              ? Colors.red
+                                              : Colors.grey,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 26,
                                     ),
-                                  ),
-                                  DataCell(Text("${team.draw}", style: const TextStyle(fontWeight: FontWeight.bold,fontSize: 26))),
-                                  DataCell(
-                                    Text(
-                                      "${team.loss}",
-                                      style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold,fontSize: 26),
-                                    ),
-                                  ),
-                                  DataCell(Text("${team.goalsFor}", style: const TextStyle(fontWeight: FontWeight.bold,fontSize: 26))),
-                                  DataCell(Text("${team.goalsAgainst}", style: const TextStyle(fontWeight: FontWeight.bold,fontSize: 26))),
-                                  DataCell(
-                                    Text(
-                                      "${team.goalDifference > 0 ? '+' : ''}${team.goalDifference}",
-                                      style: TextStyle(
-                                        color: team.goalDifference > 0
-                                            ? Colors.green
-                                            : team.goalDifference < 0
-                                                ? Colors.red
-                                                : Colors.grey,
-                                        fontWeight: FontWeight.bold,fontSize: 26,
-                                      ),
-                                    ),
-                                  ),
-                                  DataCell(
-                                    Text(
-                                      "${team.points}",
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
+                                  )),
+                                  DataCell(Text("${team.points}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 26))),
                                 ],
                               );
                             }),
                           ),
                         ),
-                      );
-                    },
-                  ),
+                      ),
 
-            // 🔹 TAB 2: FIXTURES
             isFixturesLoading
                 ? const Center(child: CircularProgressIndicator())
                 : fixtures.isEmpty
-                    ? const Center(
-                        child: Text(
-                          "No scheduled fixtures",
-                          style: TextStyle(fontSize: 18),
-                        ),
-                      )
+                    ? const Center(child: Text("No scheduled fixtures", style: TextStyle(fontSize: 18)))
                     : ListView.builder(
-                    padding: const EdgeInsets.all(10),
-                    itemCount: fixtures.length,
-                    itemBuilder: (context, index) {
-                      final fixture = fixtures[index];
-                      final homeGoals = fixture['homeGoals'];
-                      final awayGoals = fixture['awayGoals'];
-                      final score = homeGoals != null && awayGoals != null
-                          ? '$homeGoals - $awayGoals'
-                          : 'vs';
-                      return Card(
-                        margin: const EdgeInsets.symmetric(vertical: 6),
-                        elevation: 2,
-                        child: ListTile(
-                          title: Text(
-                            '${fixture['homeTeam']} $score ${fixture['awayTeam']}',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Text(fixture['matchTime'] as String? ?? ''),
-                        ),
-                      );
-                    },
-                  ),
+                        padding: const EdgeInsets.all(10),
+                        itemCount: fixtures.length,
+                        itemBuilder: (context, index) {
+                          final fixture = fixtures[index];
+                          final homeGoals = fixture['homeGoals'];
+                          final awayGoals = fixture['awayGoals'];
+                          final score = homeGoals != null && awayGoals != null
+                              ? '$homeGoals - $awayGoals'
+                              : 'vs';
 
-            // 🔹 TAB 3: RESULTS
+                          return Card(
+                            margin: const EdgeInsets.symmetric(vertical: 6),
+                            elevation: 2,
+                            child: ListTile(
+                              title: Text(
+                                '${fixture['homeTeam']} $score ${fixture['awayTeam']}',
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              subtitle: Text(fixture['matchTime'] as String? ?? ''),
+                            ),
+                          );
+                        },
+                      ),
+
             isFixturesLoading
                 ? const Center(child: CircularProgressIndicator())
                 : results.isEmpty
-                    ? const Center(
-                        child: Text(
-                          "No completed matches yet",
-                          style: TextStyle(fontSize: 18),
-                        ),
-                      )
+                    ? const Center(child: Text("No completed matches yet", style: TextStyle(fontSize: 18)))
                     : ListView.builder(
-                    padding: const EdgeInsets.all(10),
-                    itemCount: results.length,
-                    itemBuilder: (context, index) {
-                      final result = results[index];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(vertical: 6),
-                        elevation: 2,
-                        child: ListTile(
-                          title: Text(
-                            '${result.homeTeam} ${result.homeGoals} - ${result.awayGoals} ${result.awayTeam}',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Text(result.matchTime),
-                        ),
-                      );
-                    },
-                  ),
+                        padding: const EdgeInsets.all(10),
+                        itemCount: results.length,
+                        itemBuilder: (context, index) {
+                          final result = results[index];
+                          return Card(
+                            margin: const EdgeInsets.symmetric(vertical: 6),
+                            elevation: 2,
+                            child: ListTile(
+                              title: Text(
+                                '${result.homeTeam} ${result.homeGoals} - ${result.awayGoals} ${result.awayTeam}',
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              subtitle: Text(result.matchTime),
+                            ),
+                          );
+                        },
+                      ),
           ],
         ),
       ),
     );
   }
 }
-

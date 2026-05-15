@@ -11,17 +11,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 // TopScorer Model
+// TopScorer Model
 class TopScorer {
   String id;
   String name;
-  int age;
+  String teamname; // ✅ FIXED: String not int
   int goals;
   int assists;
 
   TopScorer({
     required this.id,
     required this.name,
-    required this.age,
+    required this.teamname,
     required this.goals,
     required this.assists,
   });
@@ -30,7 +31,7 @@ class TopScorer {
     return {
       'id': id,
       'name': name,
-      'age': age,
+      'Team': teamname,
       'goals': goals,
       'assists': assists,
     };
@@ -40,13 +41,12 @@ class TopScorer {
     return TopScorer(
       id: id ?? (map['id'] as String? ?? ''),
       name: map['name'] as String? ?? '',
-      age: map['age'] as int? ?? 0,
+      teamname: map['Team'] as String? ?? '', // ✅ FIXED
       goals: map['goals'] as int? ?? 0,
       assists: map['assists'] as int? ?? 0,
     );
   }
 }
-
 class Admin extends StatefulWidget {
   const Admin({super.key});
 
@@ -99,6 +99,7 @@ class _AdminState extends State<Admin> {
   late StreamSubscription<QuerySnapshot> _subscription;
   late StreamSubscription<QuerySnapshot> _fixturesSubscription;
   late StreamSubscription<QuerySnapshot> _topScorersSubscription;
+  
 
   @override
   void initState() {
@@ -597,64 +598,76 @@ class _AdminState extends State<Admin> {
   }
 
   // TopScorer Methods
-  Future<void> _addOrUpdateTopScorer() async {
-    final name = playerNameController.text.trim();
-    final age = int.tryParse(playerAgeController.text) ?? 0;
-    final goals = int.tryParse(playerGoalsController.text) ?? 0;
-    final assists = int.tryParse(playerAssistsController.text) ?? 0;
+ Future<void> _addOrUpdateTopScorer() async {
+  final name = playerNameController.text.trim();
 
-    if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Player name cannot be empty')),
-      );
-      return;
-    }
+  // ✅ TEAM NAME AS TEXT
+  final teamname = playerAgeController.text.trim();
 
-    try {
-      if (editingTopScorerId != null) {
-        // Update existing player
-        await _topScorersCol.doc(editingTopScorerId).update({
-          'name': name,
-          'age': age,
-          'goals': goals,
-          'assists': assists,
-        });
-      } else {
-        // Add new player
-        if (topScorers.length >= 30) {
-          // Remove the last player if limit is reached
-          final lastPlayer = topScorers.last;
-          await _topScorersCol.doc(lastPlayer.id).delete();
-        }
+  final goals = int.tryParse(playerGoalsController.text) ?? 0;
+  final assists = int.tryParse(playerAssistsController.text) ?? 0;
 
-        final docRef = _topScorersCol.doc();
-        await docRef.set({
-          'id': docRef.id,
-          'name': name,
-          'age': age,
-          'goals': goals,
-          'assists': assists,
-        });
+  if (name.isEmpty || teamname.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Player name and team name cannot be empty'),
+      ),
+    );
+    return;
+  }
+
+  try {
+    if (editingTopScorerId != null) {
+      // UPDATE PLAYER
+      await _topScorersCol.doc(editingTopScorerId).update({
+        'name': name,
+        'Team': teamname,
+        'goals': goals,
+        'assists': assists,
+      });
+    } else {
+      // ADD PLAYER
+      if (topScorers.length >= 30) {
+        final lastPlayer = topScorers.last;
+        await _topScorersCol.doc(lastPlayer.id).delete();
       }
-      _clearTopScorerForm();
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
-    }
-  }
 
-  void _editTopScorer(int index) {
-    final player = topScorers[index];
-    setState(() {
-      editingTopScorerId = player.id;
-      playerNameController.text = player.name;
-      playerAgeController.text = player.age.toString();
-      playerGoalsController.text = player.goals.toString();
-      playerAssistsController.text = player.assists.toString();
-    });
+      final docRef = _topScorersCol.doc();
+
+      await docRef.set({
+        'id': docRef.id,
+        'name': name,
+        'Team': teamname,
+        'goals': goals,
+        'assists': assists,
+      });
+    }
+
+    _clearTopScorerForm();
+  } catch (e) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error: $e')),
+    );
   }
+}
+
+ void _editTopScorer(int index) {
+  final player = topScorers[index];
+
+  setState(() {
+    editingTopScorerId = player.id;
+
+    playerNameController.text = player.name;
+
+    // ✅ TEAM NAME AS TEXT
+    playerAgeController.text = player.teamname;
+
+    playerGoalsController.text = player.goals.toString();
+    playerAssistsController.text = player.assists.toString();
+  });
+}
 
   Future<void> _deleteTopScorer(int index) async {
     final player = topScorers[index];
@@ -1263,9 +1276,9 @@ class _AdminState extends State<Admin> {
                   const SizedBox(height: 12),
                   TextField(
                     controller: playerAgeController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Age'),
-                  ),
+                    keyboardType: TextInputType.text,
+                    decoration: const InputDecoration(labelText: 'Team'),
+                   ),
                   const SizedBox(height: 12),
                   TextField(
                     controller: playerGoalsController,
@@ -1325,8 +1338,7 @@ class _AdminState extends State<Admin> {
                               ),
                             ),
                             subtitle: Text(
-                              'Age: ${player.age}, Goals: ${player.goals}, Assists: ${player.assists}',
-                            ),
+                             'Team: ${player.teamname}, Goals: ${player.goals}, Assists: ${player.assists}'),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
