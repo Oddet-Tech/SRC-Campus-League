@@ -317,23 +317,27 @@ class _FootballState extends State<Football> {
                           fit: BoxFit.scaleDown,
                           alignment: Alignment.topLeft,
                           child: DataTable(
+                             columnSpacing: 40,
+                             horizontalMargin: 20,
+                           dataRowMinHeight: 70,
+                            dataRowMaxHeight: 70,
                             columns: const [
-                              DataColumn(label: Text("Pos", style: TextStyle(fontWeight: FontWeight.bold))),
-                              DataColumn(label: Text("Team", style: TextStyle(fontWeight: FontWeight.bold))),
-                              DataColumn(label: Text("P", style: TextStyle(fontWeight: FontWeight.bold))),
-                              DataColumn(label: Text("W", style: TextStyle(fontWeight: FontWeight.bold))),
-                              DataColumn(label: Text("D", style: TextStyle(fontWeight: FontWeight.bold))),
-                              DataColumn(label: Text("L", style: TextStyle(fontWeight: FontWeight.bold))),
-                              DataColumn(label: Text("GF", style: TextStyle(fontWeight: FontWeight.bold))),
-                              DataColumn(label: Text("GA", style: TextStyle(fontWeight: FontWeight.bold))),
-                              DataColumn(label: Text("GD", style: TextStyle(fontWeight: FontWeight.bold))),
-                              DataColumn(label: Text("Pts", style: TextStyle(fontWeight: FontWeight.bold))),
+                              DataColumn(label: Text("Pos", style: TextStyle(fontWeight: FontWeight.bold,fontSize: 26))),
+                              DataColumn(label: Text("Team", style: TextStyle(fontWeight: FontWeight.bold,fontSize: 26))),
+                              DataColumn(label: Text("P", style: TextStyle(fontWeight: FontWeight.bold,fontSize: 26))),
+                              DataColumn(label: Text("W", style: TextStyle(fontWeight: FontWeight.bold,fontSize: 26))),
+                              DataColumn(label: Text("D", style: TextStyle(fontWeight: FontWeight.bold,fontSize: 26))),
+                              DataColumn(label: Text("L", style: TextStyle(fontWeight: FontWeight.bold,fontSize: 26))),
+                              DataColumn(label: Text("GF", style: TextStyle(fontWeight: FontWeight.bold,fontSize: 26))),
+                              DataColumn(label: Text("GA", style: TextStyle(fontWeight: FontWeight.bold,fontSize: 26))),
+                              DataColumn(label: Text("GD", style: TextStyle(fontWeight: FontWeight.bold,fontSize: 26))),
+                              DataColumn(label: Text("Pts", style: TextStyle(fontWeight: FontWeight.bold,fontSize: 26))),
                             ],
                             rows: List.generate(sortedTeams.length, (index) {
                               final team = sortedTeams[index];
                               return DataRow(
                                 cells: [
-                                  DataCell(Text("${index + 1}", style: const TextStyle(fontWeight: FontWeight.bold))),
+                                  DataCell(Text("${index + 1}", style: const TextStyle(fontWeight: FontWeight.bold,fontSize:26))),
                                   DataCell(
                                     Row(
                                       children: [
@@ -347,7 +351,7 @@ class _FootballState extends State<Football> {
                                               ? const Icon(Icons.image, size: 14, color: Colors.grey)
                                               : null,
                                         ),
-                                        const SizedBox(width: 8),
+                                        const SizedBox(width: 20),
                                         Flexible(
                                           child: Text(
                                             team.name,

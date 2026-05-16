@@ -39,30 +39,31 @@ class Team {
 
   int get goalDifference => goalsFor - goalsAgainst;
 
-  Map<String, dynamic> toMap() => {
-        'name': name,
-        'played': played,
-        'win': win,
-        'loss': loss,
-        'draw': draw,
-        'goalsFor': goalsFor,
-        'goalsAgainst': goalsAgainst,
-        'logoUrl': logoUrl,
-      };
-
+ Map<String, dynamic> toMap() {
+  return {
+    'name': name,
+    'win': win,
+    'loss': loss,
+    'draw': draw,
+    'goalsFor': goalsFor,
+    'goalsAgainst': goalsAgainst,
+    'played': played,
+    'logoUrl': logoUrl,
+  };
+}
   factory Team.fromMap(Map<String, dynamic> map, {String? id}) {
-    return Team(
-      id: id,
-      name: map['name'] ?? '',
-      played: map['played'] ?? 0,
-      win: map['win'] ?? 0,
-      loss: map['loss'] ?? 0,
-      draw: map['draw'] ?? 0,
-      goalsFor: map['goalsFor'] ?? 0,
-      goalsAgainst: map['goalsAgainst'] ?? 0,
-      logoUrl: map['logoUrl'],
-    );
-  }
+  return Team(
+    id: id,
+    name: map['name'] ?? '',
+    win: map['win'] ?? 0,
+    loss: map['loss'] ?? 0,
+    draw: map['draw'] ?? 0,
+    goalsFor: map['goalsFor'] ?? 0,
+    goalsAgainst: map['goalsAgainst'] ?? 0,
+    played: map['played'] ?? 0,
+    logoUrl: map['logoUrl'],
+  );
+}
 }
 
 class Admin extends StatefulWidget {

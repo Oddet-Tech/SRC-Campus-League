@@ -417,62 +417,72 @@ class _AdminState extends State<Admin> {
     }
   }
 
-  Future<void> _applyFixtureResult(
-    Map<String, dynamic> fixture, {
-    bool revert = false,
-  }) async {
-    final homeName = fixture['homeTeam'] as String?;
-    final awayName = fixture['awayTeam'] as String?;
-    final homeGoals = fixture['homeGoals'] is int
-        ? fixture['homeGoals'] as int
-        : int.tryParse('${fixture['homeGoals']}');
-    final awayGoals = fixture['awayGoals'] is int
-        ? fixture['awayGoals'] as int
-        : int.tryParse('${fixture['awayGoals']}');
+Future<void> _applyFixtureResult(
+  Map<String, dynamic> fixture, {
+  bool revert = false,
+}) async {
+  final homeName = fixture['homeTeam'] as String?;
+  final awayName = fixture['awayTeam'] as String?;
 
-    if (homeName == null || awayName == null) return;
-    if (homeGoals == null || awayGoals == null) return;
+  final homeGoals = fixture['homeGoals'] is int
+      ? fixture['homeGoals'] as int
+      : int.tryParse('${fixture['homeGoals']}');
 
-    final homeTeam = _findTeamByName(homeName);
-    final awayTeam = _findTeamByName(awayName);
-    if (homeTeam == null || awayTeam == null) return;
+  final awayGoals = fixture['awayGoals'] is int
+      ? fixture['awayGoals'] as int
+      : int.tryParse('${fixture['awayGoals']}');
 
-    final homeWin = homeGoals > awayGoals ? 1 : 0;
-    final homeLoss = homeGoals < awayGoals ? 1 : 0;
-    final homeDraw = homeGoals == awayGoals ? 1 : 0;
-    final awayWin = awayGoals > homeGoals ? 1 : 0;
-    final awayLoss = awayGoals < homeGoals ? 1 : 0;
-    final awayDraw = awayGoals == homeGoals ? 1 : 0;
-    final factor = revert ? -1 : 1;
+  if (homeName == null || awayName == null) return;
+  if (homeGoals == null || awayGoals == null) return;
 
-    final updatedHome = Team(
-      id: homeTeam.id,
-      name: homeTeam.name,
-      win: homeTeam.win + (homeWin * factor),
-      loss: homeTeam.loss + (homeLoss * factor),
-      draw: homeTeam.draw + (homeDraw * factor),
-      goalsFor: homeTeam.goalsFor + (homeGoals * factor),
-      goalsAgainst: homeTeam.goalsAgainst + (awayGoals * factor),
-      played: homeTeam.played + (1 * factor),
-    );
-    final updatedAway = Team(
-      id: awayTeam.id,
-      name: awayTeam.name,
-      win: awayTeam.win + (awayWin * factor),
-      loss: awayTeam.loss + (awayLoss * factor),
-      draw: awayTeam.draw + (awayDraw * factor),
-      goalsFor: awayTeam.goalsFor + (awayGoals * factor),
-      goalsAgainst: awayTeam.goalsAgainst + (homeGoals * factor),
-      played: awayTeam.played + (1 * factor),
-    );
+  final homeTeam = _findTeamByName(homeName);
+  final awayTeam = _findTeamByName(awayName);
 
-    if (homeTeam.id != null) {
-      await _teamsCol.doc(homeTeam.id).set(updatedHome.toMap());
-    }
-    if (awayTeam.id != null) {
-      await _teamsCol.doc(awayTeam.id).set(updatedAway.toMap());
-    }
+  if (homeTeam == null || awayTeam == null) return;
+final homeWin = homeGoals > awayGoals ? 1 : 0;
+  final homeLoss = homeGoals < awayGoals ? 1 : 0;
+  final homeDraw = homeGoals == awayGoals ? 1 : 0;
+
+  final awayWin = awayGoals > homeGoals ? 1 : 0;
+  final awayLoss = awayGoals < homeGoals ? 1 : 0;
+  final awayDraw = awayGoals == homeGoals ? 1 : 0;
+
+  final factor = revert ? -1 : 1;
+
+  final updatedHome = Team(
+    id: homeTeam.id,
+    name: homeTeam.name,
+    win: homeTeam.win + (homeWin * factor),
+    loss: homeTeam.loss + (homeLoss * factor),
+    draw: homeTeam.draw + (homeDraw * factor),
+    goalsFor: homeTeam.goalsFor + (homeGoals * factor),
+    goalsAgainst: homeTeam.goalsAgainst + (awayGoals * factor),
+    played: homeTeam.played + (1 * factor),
+ logoUrl: homeTeam.logoUrl,
+  );
+
+  final updatedAway = Team(
+    id: awayTeam.id,
+    name: awayTeam.name,
+    win: awayTeam.win + (awayWin * factor),
+    loss: awayTeam.loss + (awayLoss * factor),
+    draw: awayTeam.draw + (awayDraw * factor),
+    goalsFor: awayTeam.goalsFor + (awayGoals * factor),
+    goalsAgainst: awayTeam.goalsAgainst + (homeGoals * factor),
+    played: awayTeam.played + (1 * factor),
+
+    // IMPORT
+     logoUrl: awayTeam.logoUrl,
+  );
+
+  if (homeTeam.id != null) {
+    await _teamsCol.doc(homeTeam.id).set(updatedHome.toMap());
   }
+
+  if (awayTeam.id != null) {
+    await _teamsCol.doc(awayTeam.id).set(updatedAway.toMap());
+  }
+}
 
   Future<void> _saveFixture() async {
     if (selectedHomeTeam == null || selectedAwayTeam == null) {
