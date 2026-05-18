@@ -317,8 +317,8 @@ class _FootballState extends State<Football> {
                           fit: BoxFit.scaleDown,
                           alignment: Alignment.topLeft,
                           child: DataTable(
-                             columnSpacing: 40,
-                             horizontalMargin: 20,
+                             columnSpacing: 10,
+                             horizontalMargin: 100,
                            dataRowMinHeight: 70,
                             dataRowMaxHeight: 70,
                             columns: const [

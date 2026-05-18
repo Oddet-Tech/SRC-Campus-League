@@ -34,6 +34,7 @@ flutter:
     - assets/silver.png
     - assets/CUTFS.png
     - assets/Rugby.png
+    - assets/my logog.png
 
 flutter_launcher_icons:
   android: true
